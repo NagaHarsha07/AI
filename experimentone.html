@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Tic Tac Toe BFS - PyScript</title>
+    <link rel="stylesheet" href="https://pyscript.net/releases/2025.11.2/core.css" />
+    <script type="module" src="https://pyscript.net/releases/2025.11.2/core.js"></script>
+    <style>
+        table {
+            border-collapse: collapse;
+            font-size: 24px;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        td {
+            width: 60px;
+            height: 60px;
+            border: 2px solid black;
+        }
+        #board-output {
+            font-family: sans-serif;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>Tic Tac Toe using BFS</h2>
+    <div id="board-output"></div>
+
+    <py-script>
+from collections import deque
+import random
+from js import document
+
+# -------------------- Node --------------------
+class Node:
+    def __init__(self, state, parent=None, action=None):
+        self.state = state
+        self.parent = parent
+        self.action = action
+
+    def path(self):
+        node = self
+        p = []
+        while node:
+            p.append(node)
+            node = node.parent
+        return list(reversed(p))
+
+# -------------------- Problem --------------------
+class Problem:
+    def __init__(self, initial):
+        self.initial = initial
+
+    def actions(self, state):
+        return [i for i, c in enumerate(state) if c == ' ']
+
+    def result(self, state, action, player):
+        new_state = state.copy()
+        new_state[action] = player
+        return new_state
+
+    def expand(self, node, player):
+        children = []
+        for action in self.actions(node.state):
+            new_state = self.result(node.state, action, player)
+            children.append(Node(new_state, node, action))
+        return children
+
+# ---------------- Tic Tac Toe Logic ----------------
+def is_goal(state, player):
+    wins = [
+        [0,1,2],[3,4,5],[6,7,8],
+        [0,3,6],[1,4,7],[2,5,8],
+        [0,4,8],[2,4,6]
+    ]
+    return any(state[a] == state[b] == state[c] == player for a,b,c in wins)
+
+# -------------------- BFS --------------------
+def bfs(initial_state, player):
+    node = Node(initial_state)
+    if is_goal(node.state, player):
+        return node
+
+    frontier = deque([node])
+    visited = {tuple(node.state)}
+
+    while frontier:
+        current_node = frontier.popleft()
+        # BFS expands level by level to find the shortest path to a win
+        for action in [i for i, c in enumerate(current_node.state) if c == ' ']:
+            new_state = current_node.state.copy()
+            new_state[action] = player
+            child = Node(new_state, current_node, action)
+            
+            if is_goal(child.state, player):
+                return child
+            
+            s_tuple = tuple(child.state)
+            if s_tuple not in visited:
+                visited.add(s_tuple)
+                frontier.append(child)
+    return None
+
+# ---------------- Agents ----------------
+def bfs_agent(state, player='X'):
+    solution = bfs(state, player)
+    if solution:
+        # The first move to take from current state is the second node in the path
+        return solution.path()[1].action
+    # If no win found, move randomly
+    empty = [i for i, c in enumerate(state) if c == ' ']
+    return random.choice(empty) if empty else None
+
+def random_agent(state, player='O'):
+    empty = [i for i, c in enumerate(state) if c == ' ']
+    return random.choice(empty) if empty else None
+
+# ---------------- Utilities ----------------
+def print_board(state, message=""):
+    def cell(c):
+        return c if c != ' ' else '&nbsp;'
+    
+    html = f"""
+    <table border="1">
+        <tr><td>{cell(state[0])}</td><td>{cell(state[1])}</td><td>{cell(state[2])}</td></tr>
+        <tr><td>{cell(state[3])}</td><td>{cell(state[4])}</td><td>{cell(state[5])}</td></tr>
+        <tr><td>{cell(state[6])}</td><td>{cell(state[7])}</td><td>{cell(state[8])}</td></tr>
+    </table>
+    <p>{message}</p>
+    """
+    container = document.getElementById("board-output")
+    container.innerHTML += html
+
+# ---------------- Play Game ----------------
+def play_game():
+    state = [' '] * 9
+    print_board(state, "Game Start")
+
+    while True:
+        # Player X (BFS)
+        move_X = bfs_agent(state, 'X')
+        if move_X is None: break
+        state[move_X] = 'X'
+        
+        if is_goal(state, 'X'):
+            print_board(state, "X wins!")
+            break
+        if ' ' not in state:
+            print_board(state, "Draw!")
+            break
+
+        # Player O (Random)
+        move_O = random_agent(state, 'O')
+        if move_O is None: break
+        state[move_O] = 'O'
+        
+        if is_goal(state, 'O'):
+            print_board(state, "O wins!")
+            break
+        if ' ' not in state:
+            print_board(state, "Draw!")
+            break
+            
+        print_board(state, "Next turn...")
+
+play_game()
+    </py-script>
+</body>
+</html>
